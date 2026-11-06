@@ -10,18 +10,16 @@ final class SettingsWindowController {
         if window == nil {
             let view = SettingsView()
             let hosting = NSHostingView(rootView: view)
-            // 稍微放宽一点默认宽度
             let w = NSWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 540, height: 680),
                 styleMask: [.titled, .closable, .resizable],
                 backing: .buffered,
                 defer: false
             )
-            w.title = "牛马脱敏器 · 设置"
+            w.title = "Settings"
             w.contentView = hosting
             w.center()
             w.isReleasedWhenClosed = false
-            // 限制最小尺寸，防止被缩得太小
             w.minSize = NSSize(width: 480, height: 600)
             window = w
         }
@@ -45,42 +43,54 @@ struct SettingsView: View {
     @State private var lunchEndHour: Int = 13
     @State private var lunchEndMin: Int = 0
     @State private var selectedCurrency: Currency = .cny
+    @State private var language: AppLanguage = .zh
     @State private var decimalPlaces: Int = 5
     @State private var workdays: Set<Int> = []
-    @State private var quotesText: String = ""
-
+    
     var body: some View {
         Form {
-            Section("薪资") {
-                TextField("月薪（人民币）", value: $monthlySalary, format: .number)
+            Section("Language / 语言") {
+                Picker("Language", selection: $language) {
+                    ForEach(AppLanguage.allCases) { l in
+                        Text(l.displayName).tag(l)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: language) { v in
+                    s.language = v; s.save()
+                }
+            }
+
+            Section(L10n.isEn ? "Salary" : "薪资") {
+                TextField(L10n.isEn ? "Monthly Salary (CNY)" : "月薪（人民币）", value: $monthlySalary, format: .number)
                     .onChange(of: monthlySalary) { v in
                         s.monthlySalary = v; s.save()
                     }
-                Stepper("发薪日：\(payday) 号", value: $payday, in: 1...28)
+                Stepper("\(L10n.isEn ? "Payday" : "发薪日"): \(payday)", value: $payday, in: 1...28)
                     .onChange(of: payday) { v in
                         s.payday = v; s.save()
                     }
-                Text("当前日薪约：\(String(format: "%.2f", s.dailySalary)) 元")
+                Text("\(L10n.isEn ? "Daily approx" : "当前日薪约"): \(String(format: "%.2f", s.dailySalary))")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
-            Section("工作时间") {
-                timeRow("上班", hour: $workStartHour, minute: $workStartMin) {
+            Section(L10n.isEn ? "Work Time" : "工作时间") {
+                timeRow(L10n.isEn ? "Start" : "上班", hour: $workStartHour, minute: $workStartMin) {
                     s.workStart = (workStartHour, workStartMin); s.save()
                 }
-                timeRow("下班", hour: $workEndHour, minute: $workEndMin) {
+                timeRow(L10n.isEn ? "End" : "下班", hour: $workEndHour, minute: $workEndMin) {
                     s.workEnd = (workEndHour, workEndMin); s.save()
                 }
-                timeRow("午休开始", hour: $lunchStartHour, minute: $lunchStartMin) {
+                timeRow(L10n.isEn ? "Lunch Start" : "午休开始", hour: $lunchStartHour, minute: $lunchStartMin) {
                     s.lunchStart = (lunchStartHour, lunchStartMin); s.save()
                 }
-                timeRow("午休结束", hour: $lunchEndHour, minute: $lunchEndMin) {
+                timeRow(L10n.isEn ? "Lunch End" : "午休结束", hour: $lunchEndHour, minute: $lunchEndMin) {
                     s.lunchEnd = (lunchEndHour, lunchEndMin); s.save()
                 }
             }
 
-            Section("显示货币") {
-                Picker("货币", selection: $selectedCurrency) {
+            Section(L10n.isEn ? "Currency" : "显示货币") {
+                Picker("Currency", selection: $selectedCurrency) {
                     ForEach(Currency.allCases) { c in
                         Text("\(c.displayName) \(c.symbol)").tag(c)
                     }
@@ -92,30 +102,27 @@ struct SettingsView: View {
 
                 HStack {
                     if let t = rateManager.lastUpdated {
-                        Text("汇率更新于 \(t.formatted(date: .abbreviated, time: .shortened))")
+                        Text("\(L10n.isEn ? "Updated" : "汇率更新于") \(t.formatted(date: .abbreviated, time: .shortened))")
                             .font(.caption).foregroundStyle(.secondary)
                     } else {
-                        Text("暂无汇率数据")
+                        Text(L10n.isEn ? "No rate data" : "暂无汇率数据")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    // 缩短按钮文字
-                    Button(rateManager.isLoading ? "刷新中" : "刷新") {
+                    Button(rateManager.isLoading ? (L10n.isEn ? "Loading" : "刷新中") : (L10n.isEn ? "Refresh" : "刷新")) {
                         Task { await rateManager.fetchRates() }
                     }
                     .controlSize(.small)
                     .disabled(rateManager.isLoading)
                 }
 
-                Stepper("小数位数：\(decimalPlaces)", value: $decimalPlaces, in: 0...6)
+                Stepper("\(L10n.isEn ? "Decimals" : "小数位数"): \(decimalPlaces)", value: $decimalPlaces, in: 0...6)
                     .onChange(of: decimalPlaces) { v in
                         s.decimalPlaces = v; s.save()
                     }
-                Text("提示：日元固定显示 0 位小数")
-                    .font(.caption2).foregroundStyle(.tertiary)
             }
 
-            Section("工作日") {
+            Section(L10n.isEn ? "Workdays" : "工作日") {
                 HStack {
                     ForEach([2,3,4,5,6,7,1], id: \.self) { wd in
                         Toggle(weekdayName(wd), isOn: Binding(
@@ -128,20 +135,9 @@ struct SettingsView: View {
                     }
                 }
             }
-
-            Section("毒鸡汤（每行一条）") {
-                TextEditor(text: $quotesText)
-                    .frame(height: 100)
-                    .onChange(of: quotesText) { v in
-                        s.quotes = v.components(separatedBy: "\n").filter { !$0.isEmpty }
-                        s.save()
-                    }
-            }
         }
-        // 关键：使用 grouped 样式，它会自动适配宽度
         .formStyle(.grouped)
         .onAppear { loadFromSettings() }
-        // 去掉了原有的 .frame(width:height:) 强制尺寸，让窗口自适应拉伸
     }
 
     private func loadFromSettings() {
@@ -156,9 +152,9 @@ struct SettingsView: View {
         lunchEndHour = s.lunchEnd.0
         lunchEndMin = s.lunchEnd.1
         selectedCurrency = s.selectedCurrency
+        language = s.language
         decimalPlaces = s.decimalPlaces
         workdays = s.workdays
-        quotesText = s.quotes.joined(separator: "\n")
     }
 
     private func timeRow(_ title: String,
@@ -187,6 +183,11 @@ struct SettingsView: View {
     }
 
     private func weekdayName(_ wd: Int) -> String {
-        ["日","一","二","三","四","五","六"][wd - 1]
+        if L10n.isEn {
+            let names = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
+            return names[wd - 1]
+        } else {
+            return ["日","一","二","三","四","五","六"][wd - 1]
+        }
     }
 }

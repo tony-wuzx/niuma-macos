@@ -19,12 +19,7 @@ final class Settings {
     var payday = 15
     var decimalPlaces = 5
     var selectedCurrency: Currency = .cny
-    var quotes: [String] = [
-        "每一秒都在到账，每一分都是牛马的勋章。",
-        "你不是在打工，你是在为老板的梦想添砖加瓦。",
-        "工资不是老板给的，是你用时间换的。",
-        "今天也是努力成为更好牛马的一天。"
-    ]
+    var language: AppLanguage = .zh // 新增语言保存
     var windowPosition: NSPoint?
 
     var dailySalary: Double {
@@ -62,7 +57,7 @@ final class Settings {
         var payday: Int
         var decimalPlaces: Int
         var selectedCurrency: String
-        var quotes: [String]
+        var language: String?
         var windowX: Double?
         var windowY: Double?
     }
@@ -81,7 +76,7 @@ final class Settings {
             payday: payday,
             decimalPlaces: decimalPlaces,
             selectedCurrency: selectedCurrency.rawValue,
-            quotes: quotes,
+            language: language.rawValue,
             windowX: windowPosition.map { Double($0.x) },
             windowY: windowPosition.map { Double($0.y) }
         )
@@ -102,10 +97,8 @@ final class Settings {
         lunchEnd = (s.lunchEnd[0], s.lunchEnd[1])
         payday = s.payday
         decimalPlaces = s.decimalPlaces
-        if let c = Currency(rawValue: s.selectedCurrency) {
-            selectedCurrency = c
-        }
-        quotes = s.quotes
+        if let c = Currency(rawValue: s.selectedCurrency) { selectedCurrency = c }
+        if let l = s.language, let lang = AppLanguage(rawValue: l) { language = lang }
         if let x = s.windowX, let y = s.windowY {
             windowPosition = NSPoint(x: CGFloat(x), y: CGFloat(y))
         }
