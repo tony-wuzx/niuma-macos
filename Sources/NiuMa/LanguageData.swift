@@ -105,23 +105,26 @@ struct Wishlist {
     static func getMessage(earned: Double) -> String {
         let isEn = L10n.isEn
         
+        // 找出所有买得起的正常物品和离谱物品
         let affordableNormal = normalItems.filter { earned >= $0.threshold }
         let affordableAbsurd = absurdItems.filter { earned >= $0.threshold }
         
         var targetItem: WishItem?
         
         if earned >= 5 {
+            // 50% 概率从“正常池”里随机挑一个买得起的
+            // 50% 概率从“离谱池”里随机挑一个买得起的
             if Bool.random() {
-                targetItem = affordableAbsurd.last ?? affordableNormal.last
+                targetItem = affordableAbsurd.randomElement() ?? affordableNormal.randomElement()
             } else {
-                targetItem = affordableNormal.last ?? affordableAbsurd.last
+                targetItem = affordableNormal.randomElement() ?? affordableAbsurd.randomElement()
             }
         }
         
         if let item = targetItem {
-            // 把“稳住”或 "Keep going" 放到了最前面
             return isEn ? "Keep going, you've earned \(item.en)." : "稳住，今天已经赚到\(item.zh)了。"
         } else {
+            // 买不起的话，找最便宜的目标
             let allItems = normalItems + absurdItems
             let nextItems = allItems.filter { earned < $0.threshold }.sorted { $0.threshold < $1.threshold }
             
