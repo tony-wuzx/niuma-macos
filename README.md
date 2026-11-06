@@ -1,15 +1,19 @@
 # 🐮 牛马脱敏器 · macOS 版 (NiuMa macOS)
 
+> 🍎 **本项目是 [feiyuaq/niuma](https://github.com/feiyuaq/niuma) (Windows 版) 的 macOS 移植版。**
+> **非常感谢原作者 [@feiyuaq](https://github.com/feiyuaq) 提供的绝妙创意与原始设计！** 
+> 原版基于 .NET 开发，**使用 Swift 完全重写并适配 macOS**。支持苹果芯片 (M1/M2/M3/M4) 及 Intel 芯片。
+
 > 上班摸鱼时看一眼，每一秒都在到账。
 > 一个基于 SwiftUI 开发的 macOS 桌面悬浮窗小工具，实时显示你今天上班已经赚了多少钱。
-
-本项目是基于 [feiyuaq/niuma](https://github.com/feiyuaq/niuma) 的 Windows 版本，**使用 Swift 完全重写并适配 macOS**。支持苹果芯片 (M1/M2/M3/M4) 及 Intel 芯片。
 
 ---
 
 ## 📸 界面预览
 
-*(建议在这里放一张截图：你可以用手机或 Mac 的截图工具截一张悬浮窗的图，拖进 GitHub 编辑框里，它会自动生成图片链接，替换掉这行文字)*
+<img width="761" height="1163" alt="image" src="https://github.com/user-attachments/assets/2bcf6b3c-920d-4e88-bacd-f1f48a6cff4c" />
+
+<img width="1506" height="1680" alt="image" src="https://github.com/user-attachments/assets/2b76a7ba-a131-40d6-b668-3b27de50181f" />
 
 ---
 
