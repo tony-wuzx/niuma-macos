@@ -5,22 +5,24 @@ import AppKit
 final class SettingsWindowController {
     static let shared = SettingsWindowController()
     private var window: NSWindow?
+    private var engineRef: SalaryEngine?
 
     func showWindow(engine: SalaryEngine) {
+        self.engineRef = engine
         if window == nil {
-            let view = SettingsView()
+            let view = SettingsView(engine: engine)
             let hosting = NSHostingView(rootView: view)
             let w = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 540, height: 680),
+                contentRect: NSRect(x: 0, y: 0, width: 540, height: 820),
                 styleMask: [.titled, .closable, .resizable],
                 backing: .buffered,
                 defer: false
             )
-            w.title = "Settings"
+            w.title = "设置"
             w.contentView = hosting
             w.center()
             w.isReleasedWhenClosed = false
-            w.minSize = NSSize(width: 480, height: 600)
+            w.minSize = NSSize(width: 480, height: 700)
             window = w
         }
         window?.makeKeyAndOrderFront(nil)
@@ -29,8 +31,10 @@ final class SettingsWindowController {
 }
 
 struct SettingsView: View {
+    var engine: SalaryEngine
     private let s = Settings.shared
     @ObservedObject private var rateManager = ExchangeRateManager.shared
+    @ObservedObject private var niumaGuard = NiuMaGuardManager.shared
 
     @State private var monthlySalary: Double = 15000
     @State private var payday: Int = 15
@@ -46,6 +50,10 @@ struct SettingsView: View {
     @State private var language: AppLanguage = .zh
     @State private var decimalPlaces: Int = 5
     @State private var workdays: Set<Int> = []
+    
+    @State private var offWorkReminderMinutes: Int = 30
+    @State private var healthReminderMinutes: Int = 30
+    @State private var healthReminderDuration: Int = 8
     
     var body: some View {
         Form {
@@ -66,10 +74,22 @@ struct SettingsView: View {
                     .onChange(of: monthlySalary) { v in
                         s.monthlySalary = v; s.save()
                     }
-                Stepper("\(L10n.isEn ? "Payday" : "发薪日"): \(payday)", value: $payday, in: 1...28)
-                    .onChange(of: payday) { v in
-                        s.payday = v; s.save()
+                
+                HStack {
+                    Text(L10n.isEn ? "Payday (Day)" : "发薪日 (号)")
+                    Spacer()
+                    Picker("", selection: $payday) {
+                        ForEach(1...31, id: \.self) { day in
+                            Text("\(day)").tag(day)
+                        }
                     }
+                    .labelsHidden()
+                    .fixedSize()
+                }
+                .onChange(of: payday) { v in
+                    s.payday = v; s.save()
+                }
+                
                 Text("\(L10n.isEn ? "Daily approx" : "当前日薪约"): \(String(format: "%.2f", s.dailySalary))")
                     .font(.caption).foregroundStyle(.secondary)
             }
@@ -87,6 +107,61 @@ struct SettingsView: View {
                 timeRow(L10n.isEn ? "Lunch End" : "午休结束", hour: $lunchEndHour, minute: $lunchEndMin) {
                     s.lunchEnd = (lunchEndHour, lunchEndMin); s.save()
                 }
+            }
+
+            Section("牛马守卫") {
+                HStack {
+                    Text("下班/午休提前提醒 (分钟)")
+                    Spacer()
+                    Picker("", selection: $offWorkReminderMinutes) {
+                        ForEach(1...30, id: \.self) { min in
+                            Text("\(min)").tag(min)
+                        }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                }
+                .onChange(of: offWorkReminderMinutes) { v in
+                    s.offWorkReminderMinutes = v; s.save()
+                }
+
+                HStack {
+                    Text("摸鱼横幅提醒频率 (分钟)")
+                    Spacer()
+                    Picker("", selection: $healthReminderMinutes) {
+                        ForEach(1...30, id: \.self) { min in
+                            Text("\(min)").tag(min)
+                        }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                }
+                .onChange(of: healthReminderMinutes) { v in
+                    s.healthReminderMinutes = v
+                    s.save()
+                    engine.setupHealthTimer()
+                }
+                
+                HStack {
+                    Text("横幅停留时间 (秒)")
+                    Spacer()
+                    Picker("", selection: $healthReminderDuration) {
+                        ForEach(3...10, id: \.self) { sec in
+                            Text("\(sec)").tag(sec)
+                        }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                }
+                .onChange(of: healthReminderDuration) { v in
+                    s.healthReminderDuration = v
+                    s.save()
+                }
+
+                Toggle("到点自动锁屏", isOn: $niumaGuard.autoLockScreen)
+                    .onChange(of: niumaGuard.autoLockScreen) { _ in niumaGuard.save() }
+                Toggle("锁屏后鼠标晃动调戏", isOn: $niumaGuard.mouseJitter)
+                    .onChange(of: niumaGuard.mouseJitter) { _ in niumaGuard.save() }
             }
 
             Section(L10n.isEn ? "Currency" : "显示货币") {
@@ -155,6 +230,9 @@ struct SettingsView: View {
         language = s.language
         decimalPlaces = s.decimalPlaces
         workdays = s.workdays
+        offWorkReminderMinutes = max(1, s.offWorkReminderMinutes)
+        healthReminderMinutes = max(1, s.healthReminderMinutes)
+        healthReminderDuration = s.healthReminderDuration
     }
 
     private func timeRow(_ title: String,

@@ -19,8 +19,13 @@ final class Settings {
     var payday = 15
     var decimalPlaces = 5
     var selectedCurrency: Currency = .cny
-    var language: AppLanguage = .zh // 新增语言保存
+    var language: AppLanguage = .zh
     var windowPosition: NSPoint?
+
+    // 守卫配置
+    var offWorkReminderMinutes: Int = 30
+    var healthReminderMinutes: Int = 30
+    var healthReminderDuration: Int = 8 // 横幅显示秒数
 
     var dailySalary: Double {
         let cal = Calendar.current
@@ -60,6 +65,9 @@ final class Settings {
         var language: String?
         var windowX: Double?
         var windowY: Double?
+        var offWorkReminderMinutes: Int?
+        var healthReminderMinutes: Int?
+        var healthReminderDuration: Int?
     }
 
     private init() { load() }
@@ -78,7 +86,10 @@ final class Settings {
             selectedCurrency: selectedCurrency.rawValue,
             language: language.rawValue,
             windowX: windowPosition.map { Double($0.x) },
-            windowY: windowPosition.map { Double($0.y) }
+            windowY: windowPosition.map { Double($0.y) },
+            offWorkReminderMinutes: offWorkReminderMinutes,
+            healthReminderMinutes: healthReminderMinutes,
+            healthReminderDuration: healthReminderDuration
         )
         if let data = try? JSONEncoder().encode(s) {
             try? data.write(to: fileURL)
@@ -102,5 +113,8 @@ final class Settings {
         if let x = s.windowX, let y = s.windowY {
             windowPosition = NSPoint(x: CGFloat(x), y: CGFloat(y))
         }
+        if let off = s.offWorkReminderMinutes { offWorkReminderMinutes = off }
+        if let health = s.healthReminderMinutes { healthReminderMinutes = health }
+        if let duration = s.healthReminderDuration { healthReminderDuration = duration }
     }
 }

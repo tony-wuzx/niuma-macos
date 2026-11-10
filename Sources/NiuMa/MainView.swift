@@ -3,6 +3,7 @@ import SwiftUI
 struct MainView: View {
     @ObservedObject var engine: SalaryEngine
     @ObservedObject private var rateManager = ExchangeRateManager.shared
+    @ObservedObject private var niumaGuard = NiuMaGuardManager.shared
     private let settings = Settings.shared
 
     @State private var wishMessage: String = ""
@@ -17,6 +18,29 @@ struct MainView: View {
         let val = rateManager.convert(cnyAmount: cny, to: settings.selectedCurrency)
         let d = decimals ?? effectiveDecimals
         return "\(settings.selectedCurrency.symbol)\(String(format: "%.\(d)f", val))"
+    }
+    
+    @ViewBuilder
+    private var runIconView: some View {
+        let todayStr = engine.dateStr
+        let isPunctual = niumaGuard.punctual.contains(todayStr)
+        
+        let now = Date()
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: now)
+        let end = cal.date(bySettingHour: settings.workEnd.0, minute: settings.workEnd.1, second: 0, of: today) ?? now
+        let isOvertime = now >= end
+        
+        let color: Color = isPunctual ? .green : (isOvertime ? .red : .secondary)
+        
+        Button {
+            niumaGuard.togglePunctual()
+        } label: {
+            Image(systemName: "figure.run")
+                .font(.system(size: 15, weight: isPunctual ? .bold : .regular))
+                .foregroundColor(color)
+        }
+        .buttonStyle(.plain)
     }
 
     var body: some View {
@@ -34,7 +58,15 @@ struct MainView: View {
                     
                     Spacer()
                     
-                    HStack(spacing: 12) {
+                    HStack(spacing: 10) {
+                        runIconView
+                        
+                        Button { NiuMaGuardReportWindowController.shared.showWindow() } label: {
+                            Image(systemName: "calendar")
+                        }
+                        
+                        Divider().frame(height: 12)
+
                         Button { engine.maskAmount.toggle() } label: {
                             Image(systemName: engine.maskAmount ? "eye.slash" : "eye")
                         }
@@ -48,13 +80,18 @@ struct MainView: View {
                         Button { SettingsWindowController.shared.showWindow(engine: engine) } label: {
                             Image(systemName: "gearshape")
                         }
+                        
+                        // 一键退出
+                        Button { NSApp.terminate(nil) } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.red.opacity(0.8))
+                        }
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
                     .font(.system(size: 14))
                 }
 
-                // 状态行
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(engine.statusText)
                         .font(.system(size: 24, weight: .bold))
@@ -67,7 +104,6 @@ struct MainView: View {
                     }
                 }
 
-                // 金额
                 VStack(alignment: .leading, spacing: 2) {
                     Text(L10n.todayEarned)
                         .font(.system(size: 12))
@@ -88,20 +124,17 @@ struct MainView: View {
 
                 if !engine.isCollapsed {
                     VStack(alignment: .leading, spacing: 12) {
-                        // 速度 + 心愿单
                         VStack(alignment: .leading, spacing: 6) {
                             Text(L10n.speed(money(engine.perSecond, decimals: 4), money(engine.perMinute, decimals: 2)))
                                 .font(.system(size: 12))
                                 .foregroundStyle(.secondary)
                             
-                            // 注意这里：去掉了 lineLimit(2)，改成 fixedSize 让文字自动撑开换行
                             Text(wishMessage)
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(.primary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         
-                        // 进度条
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
                                 Text("\(L10n.progress) \(String(format: "%.1f", engine.progress * 100))%")
@@ -118,7 +151,6 @@ struct MainView: View {
                         
                         Divider()
                         
-                        // 本月累计
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
                                 Text(L10n.monthlyTotal)
@@ -134,7 +166,6 @@ struct MainView: View {
                                 .foregroundStyle(.secondary)
                         }
 
-                        // 时薪 / 分薪 / 满勤
                         VStack(alignment: .leading, spacing: 4) {
                             Text(L10n.hourlyMinutely(money(engine.perHour, decimals: 2), money(engine.perMinute, decimals: 3)))
                                 .font(.system(size: 12))
@@ -144,7 +175,6 @@ struct MainView: View {
                                 .foregroundStyle(.secondary)
                         }
 
-                        // 底部毒鸡汤
                         HStack {
                             Spacer()
                             Text("\"\(engine.quote)\"")
@@ -164,7 +194,27 @@ struct MainView: View {
             }
             .padding(16)
         }
-        .frame(width: 340, height: engine.isCollapsed ? 160 : 440)
+        .overlay(alignment: .top) {
+            if engine.showHealthReminder {
+                HStack {
+                    Text(engine.healthMessage)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white)
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(
+                    LinearGradient(colors: [.pink, .purple, .blue], startPoint: .topLeading, endPoint: .bottomTrailing)
+                )
+                .cornerRadius(10)
+                .shadow(color: .purple.opacity(0.4), radius: 8, x: 0, y: 4)
+                .padding(.horizontal, 8)
+                .padding(.top, 8)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .frame(width: 340, height: engine.isCollapsed ? 160 : 480)
         .onAppear {
             wishMessage = Wishlist.getMessage(earned: engine.todayEarned)
         }

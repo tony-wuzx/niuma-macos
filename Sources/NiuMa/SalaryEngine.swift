@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import SwiftUI
 
 @MainActor
 final class SalaryEngine: ObservableObject {
@@ -25,9 +26,14 @@ final class SalaryEngine: ObservableObject {
     @Published var clickThrough = false
     @Published var isCollapsed = false
 
+    @Published var showHealthReminder = false
+    @Published var healthMessage = ""
+
     private let settings = Settings.shared
     private var timer: Timer?
     private var quoteTimer: Timer?
+    private var healthTimer: Timer?
+    private var dismissTimer: Timer?
 
     func start() {
         tick()
@@ -38,11 +44,49 @@ final class SalaryEngine: ObservableObject {
         quoteTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.rotateQuote() }
         }
+        
+        setupHealthTimer()
+    }
+
+    func setupHealthTimer() {
+        healthTimer?.invalidate()
+        guard settings.healthReminderMinutes > 0 else { return }
+        let interval = TimeInterval(settings.healthReminderMinutes * 60)
+        healthTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.triggerHealthReminder() }
+        }
     }
 
     func stop() {
         timer?.invalidate()
         quoteTimer?.invalidate()
+        healthTimer?.invalidate()
+        dismissTimer?.invalidate()
+    }
+
+    func triggerHealthReminder() {
+        healthMessage = HealthReminder.getRandomMessage()
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+            showHealthReminder = true
+        }
+        
+        let duration = Double(max(1, settings.healthReminderDuration))
+        
+        dismissTimer?.invalidate()
+        dismissTimer = Timer.scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
+            MainActor.assumeIsolated {
+                withAnimation(.easeOut) {
+                    self?.showHealthReminder = false
+                }
+            }
+        }
+    }
+    
+    func dismissHealthReminder() {
+        dismissTimer?.invalidate()
+        withAnimation {
+            showHealthReminder = false
+        }
     }
 
     private func tick() {
