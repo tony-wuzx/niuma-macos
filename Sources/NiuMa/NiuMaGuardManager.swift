@@ -22,6 +22,17 @@ final class NiuMaGuardManager: ObservableObject {
     private var timer: Timer?
     private let settings = Settings.shared
 
+    private let toxicMessages = [
+        "老板还没走？你是想卷死同事吗？",
+        "距离下班还有5分钟，请立刻保存代码跑路！",
+        "你的猫/狗还在家等你，工作明天再说。",
+        "再敲键盘就不礼貌了，赶紧收拾东西！",
+        "工资就这么点，你拼什么命啊？",
+        "老板的保时捷轮毂，有你的一份功劳。",
+        "时间到了，赶紧跑，不要回头！",
+        "午休时间到，闭眼，让脑子放个假。"
+    ]
+
     private let configURL: URL = {
         let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
             .appendingPathComponent("NiuMa", isDirectory: true)
@@ -37,7 +48,6 @@ final class NiuMaGuardManager: ObservableObject {
 
     private init() {
         load()
-        // 每秒检测一次
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tickGuard() }
         }
@@ -45,9 +55,7 @@ final class NiuMaGuardManager: ObservableObject {
 
     func save() {
         let cfg = Config(autoLockScreen: autoLockScreen, mouseJitter: mouseJitter, punctual: punctual, overtime: overtime)
-        if let data = try? JSONEncoder().encode(cfg) {
-            try? data.write(to: configURL)
-        }
+        if let data = try? JSONEncoder().encode(cfg) { try? data.write(to: configURL) }
     }
 
     private func load() {
@@ -61,9 +69,8 @@ final class NiuMaGuardManager: ObservableObject {
 
     func togglePunctual() {
         let today = todayString()
-        if punctual.contains(today) {
-            punctual.removeAll { $0 == today }
-        } else {
+        if punctual.contains(today) { punctual.removeAll { $0 == today } } 
+        else {
             punctual.append(today)
             overtime.removeAll { $0 == today }
         }
@@ -71,55 +78,55 @@ final class NiuMaGuardManager: ObservableObject {
     }
 
     private func todayString() -> String {
-        let df = DateFormatter()
-        df.dateFormat = "yyyy-MM-dd"
+        let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
         return df.string(from: Date())
     }
 
     private func todayAt(_ hm: (Int, Int)) -> Date? {
         return Calendar.current.date(bySettingHour: hm.0, minute: hm.1, second: 0, of: Date())
     }
+    
+    private func triggerBroadcast() {
+        if let msg = toxicMessages.randomElement() {
+            NotificationCenter.default.post(name: .niumaTriggerBroadcast, object: msg)
+        }
+    }
 
     private func tickGuard() {
         let now = Date()
         let today = todayString()
 
-        // 1. 午休提前提醒（内部记录，不再发系统通知）
         if let lunchStart = todayAt(settings.lunchStart) {
             let remindTime = lunchStart.addingTimeInterval(-Double(settings.offWorkReminderMinutes) * 60)
             if now >= remindTime && now < lunchStart && !lunchEarlyNotified && settings.offWorkReminderMinutes > 0 {
-                lunchEarlyNotified = true
+                lunchEarlyNotified = true; triggerBroadcast()
             }
         }
 
-        // 2. 午休准点提醒（内部记录）
         if let lunch = todayAt(settings.lunchStart), now >= lunch, now < lunch.addingTimeInterval(30*60), !lunchNotified {
-            lunchNotified = true
+            lunchNotified = true; triggerBroadcast()
         }
 
-        // 3. 下班提前提醒（内部记录）
         if let end = todayAt(settings.workEnd) {
             let remindTime = end.addingTimeInterval(-Double(settings.offWorkReminderMinutes) * 60)
             if now >= remindTime && now < end && !offWorkNotified && settings.offWorkReminderMinutes > 0 {
-                offWorkNotified = true
+                offWorkNotified = true; triggerBroadcast()
             }
         }
 
-        // 4. 下班锁屏
-        if let off = todayAt(settings.workEnd), now >= off, !locked, autoLockScreen {
+        if let off = todayAt(settings.workEnd), now >= off, !locked {
             locked = true
-            if !overtime.contains(today) && !punctual.contains(today) {
-                overtime.append(today)
-                save()
-            }
+            if !overtime.contains(today) && !punctual.contains(today) { overtime.append(today); save() }
+            triggerBroadcast()
             
-            let task = Process()
-            task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-            task.arguments = ["-b", "com.apple.ScreenSaver.Engine"]
-            try? task.run()
+            if autoLockScreen {
+                let task = Process()
+                task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+                task.arguments = ["-b", "com.apple.ScreenSaver.Engine"]
+                try? task.run()
+            }
         }
 
-        // 5. 鼠标晃动调戏（不发系统通知）
         let pos = NSEvent.mouseLocation
         let moved = pos != lastMouse && lastMouse != .zero
         lastMouse = pos
@@ -128,7 +135,6 @@ final class NiuMaGuardManager: ObservableObject {
             let loc = NSEvent.mouseLocation
             let move = CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: CGPoint(x: loc.x + 10, y: loc.y + 10), mouseButton: .left)
             move?.post(tap: .cghidEventTap)
-            
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 let back = CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: loc, mouseButton: .left)
                 back?.post(tap: .cghidEventTap)
@@ -136,12 +142,8 @@ final class NiuMaGuardManager: ObservableObject {
             lastJitter = now
         }
         
-        // 每天早上重置状态
         if let start = todayAt(settings.workStart), now < start {
-            locked = false
-            lunchNotified = false
-            lunchEarlyNotified = false
-            offWorkNotified = false
+            locked = false; lunchNotified = false; lunchEarlyNotified = false; offWorkNotified = false
         }
     }
 }

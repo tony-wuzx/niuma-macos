@@ -20,6 +20,10 @@ final class SettingsWindowController {
             )
             w.title = "设置"
             w.contentView = hosting
+            w.standardWindowButton(.miniaturizeButton)?.isHidden = true
+            w.standardWindowButton(.zoomButton)?.isHidden = true
+            w.standardWindowButton(.miniaturizeButton)?.isHidden = true
+            w.standardWindowButton(.zoomButton)?.isHidden = true
             w.center()
             w.isReleasedWhenClosed = false
             w.minSize = NSSize(width: 480, height: 700)
@@ -139,7 +143,10 @@ struct SettingsView: View {
                 .onChange(of: healthReminderMinutes) { v in
                     s.healthReminderMinutes = v
                     s.save()
-                    engine.setupHealthTimer()
+                    // 通知 AppDelegate 重启定时器
+                    if let appDelegate = NSApp.delegate as? AppDelegate {
+                        appDelegate.startHealthTimer()
+                    }
                 }
                 
                 HStack {

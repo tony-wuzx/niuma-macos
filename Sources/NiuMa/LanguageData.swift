@@ -99,7 +99,7 @@ struct Wishlist {
     static let normalItems: [WishItem] = [
         .init(price: 3, zhUnit: "瓶", zhName: "冰红茶", enName: "bottle of iced tea"),
         .init(price: 4, zhUnit: "包", zhName: "辣条", enName: "pack of spicy strips"),
-        .init(price: 5, zhUnit: "个", zhName: "肉包子", enName: "meat bun"),
+        .init(price: 2, zhUnit: "个", zhName: "肉包子", enName: "meat bun"),
         .init(price: 6, zhUnit: "杯", zhName: "蜜雪冰城", enName: "cheap milk tea"),
         .init(price: 8, zhUnit: "份", zhName: "沙县拌面", enName: "Sha County noodles"),
         .init(price: 10, zhUnit: "份", zhName: "煎饼果子", enName: "pancake roll"),
@@ -107,31 +107,31 @@ struct Wishlist {
         .init(price: 20, zhUnit: "份", zhName: "兰州拉面", enName: "Lanzhou noodles"),
         .init(price: 30, zhUnit: "顿", zhName: "华莱士喷射套餐", enName: "Wallace fried chicken"),
         .init(price: 50, zhUnit: "包", zhName: "软中华", enName: "premium cigarettes"),
-        .init(price: 100, zhUnit: "条", zhName: "纯棉内裤", enName: "cotton underwear"),
+        .init(price: 30, zhUnit: "条", zhName: "纯棉内裤", enName: "cotton underwear"),
         .init(price: 200, zhUnit: "顿", zhName: "海底捞", enName: "Haidilao hotpot"),
-        .init(price: 300, zhUnit: "个", zhName: "罗技鼠标", enName: "Logitech mouse"),
-        .init(price: 500, zhUnit: "双", zhName: "回力球鞋", enName: "Warrior sneakers"),
-        .init(price: 1000, zhUnit: "张", zhName: "短途高铁票", enName: "high-speed train ticket")
+        .init(price: 150, zhUnit: "台", zhName: "华强北手机", enName: "Logitech mouse"),
+        .init(price: 100, zhUnit: "双", zhName: "莆田鞋", enName: "Warrior sneakers"),
+        .init(price: 50, zhUnit: "张", zhName: "短途高铁票", enName: "high-speed train ticket")
     ]
     
     // 农业/产地批发物资（震撼物价，价格极低）
     static let shockItems: [WishItem] = [
         .init(price: 0.1, zhUnit: "张", zhName: "A4纸", enName: "sheet of A4 paper"),
-        .init(price: 0.15, zhUnit: "个", zhName: "鸡蛋", enName: "egg"),
-        .init(price: 0.2, zhUnit: "斤", zhName: "产地大白菜", enName: "pound of wholesale cabbage"),
+        .init(price: 0.6, zhUnit: "个", zhName: "鸡蛋", enName: "egg"),
+        .init(price: 0.2, zhUnit: "斤", zhName: "大白菜", enName: "pound of wholesale cabbage"),
         .init(price: 0.3, zhUnit: "个", zhName: "大馒头", enName: "steamed bun"),
-        .init(price: 0.5, zhUnit: "斤", zhName: "产地土豆", enName: "pound of wholesale potatoes"),
-        .init(price: 0.8, zhUnit: "斤", zhName: "产地白萝卜", enName: "pound of wholesale radish"),
-        .init(price: 1.2, zhUnit: "斤", zhName: "产地大米", enName: "pound of wholesale rice"),
-        .init(price: 1.5, zhUnit: "斤", zhName: "产地苹果", enName: "pound of wholesale apples"),
+        .init(price: 0.5, zhUnit: "斤", zhName: "土豆", enName: "pound of wholesale potatoes"),
+        .init(price: 0.8, zhUnit: "斤", zhName: "白萝卜", enName: "pound of wholesale radish"),
+        .init(price: 1.2, zhUnit: "斤", zhName: "大米", enName: "pound of wholesale rice"),
+        .init(price: 1.5, zhUnit: "斤", zhName: "苹果", enName: "pound of wholesale apples"),
         .init(price: 1.8, zhUnit: "吨", zhName: "自来水", enName: "ton of tap water"),
-        .init(price: 8.0, zhUnit: "斤", zhName: "产地生猪", enName: "pound of live pig")
+        .init(price: 8.0, zhUnit: "斤", zhName: "生猪", enName: "pound of live pig")
     ]
     
     // 极度离谱/反差拉满的奢华品
     static let luxuryItems: [WishItem] = [
         .init(price: 1500, zhUnit: "头", zhName: "生猪", enName: "live pig"),
-        .init(price: 5000, zhUnit: "辆", zhName: "二手电动车", enName: "second-hand e-bike"),
+        .init(price: 800, zhUnit: "辆", zhName: "二手电动车", enName: "second-hand e-bike"),
         .init(price: 8000, zhUnit: "平米", zhName: "海景房", enName: "sqm of a sea-view house"),
         .init(price: 12000, zhUnit: "辆", zhName: "二手五菱宏光", enName: "second-hand Wuling van"),
         .init(price: 60000, zhUnit: "平米", zhName: "北京五环外房子", enName: "sqm of a house in Beijing suburbs"),

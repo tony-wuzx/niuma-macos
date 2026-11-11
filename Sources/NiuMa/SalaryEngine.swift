@@ -23,6 +23,7 @@ final class SalaryEngine: ObservableObject {
     @Published var totalHoursStr: String = "0.00"
 
     @Published var maskAmount = false
+    @Published var lastHealthTriggerTime: Date = .distantPast
     @Published var clickThrough = false
     @Published var isCollapsed = false
 
@@ -45,15 +46,31 @@ final class SalaryEngine: ObservableObject {
             MainActor.assumeIsolated { self?.rotateQuote() }
         }
         
+        print("🚀 [SalaryEngine] 引擎启动，准备初始化摸鱼定时器...")
         setupHealthTimer()
     }
 
     func setupHealthTimer() {
         healthTimer?.invalidate()
-        guard settings.healthReminderMinutes > 0 else { return }
-        let interval = TimeInterval(settings.healthReminderMinutes * 60)
+        
+        // 读取配置
+        let minutes = settings.healthReminderMinutes
+        print("🔧 [NiuMa] 读取到摸鱼提醒配置: \(minutes) 分钟")
+        
+        if minutes <= 0 {
+            print("❌ [NiuMa] 配置为 0 或负数，定时器不启动。请去设置界面改成 1 分钟并保存。")
+            return
+        }
+        
+        // 为了防止是秒数还是分钟数的逻辑错误，直接按分钟算
+        let interval = TimeInterval(minutes * 60)
+        print("✅ [NiuMa] 摸鱼定时器已成功启动！间隔: \(interval) 秒")
+        
         healthTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.triggerHealthReminder() }
+            MainActor.assumeIsolated { 
+                print("⏰ [NiuMa] 摸鱼时间到，触发广播！")
+                self?.triggerHealthReminder() 
+            }
         }
     }
 
@@ -65,6 +82,7 @@ final class SalaryEngine: ObservableObject {
     }
 
     func triggerHealthReminder() {
+        // 强制使用摸鱼健康文案
         healthMessage = HealthReminder.getRandomMessage()
         withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
             showHealthReminder = true

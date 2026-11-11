@@ -162,6 +162,8 @@ final class NiuMaGuardReportWindowController {
             )
             w.title = "牛马守卫报表"
             w.contentView = hosting
+            w.standardWindowButton(.miniaturizeButton)?.isHidden = true
+            w.standardWindowButton(.zoomButton)?.isHidden = true
             w.center()
             w.isReleasedWhenClosed = false
             window = w

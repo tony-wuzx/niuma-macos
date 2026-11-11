@@ -5,9 +5,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var window: NSWindow!
     var statusItem: NSStatusItem!
     
-    // 延迟初始化，确保在主线程
     var engine: SalaryEngine!
     var settings: Settings!
+    
+    // 🎯 原生级别的死循环定时器
+    var healthTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         MainActor.assumeIsolated {
@@ -16,6 +18,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.createWindow()
             self.createStatusItem()
             self.engine.start()
+            
+            // 启动原生定时器
+            startHealthTimer()
+            
+            NotificationCenter.default.addObserver(self, selector: #selector(handleMiniModeToggle(_:)), name: .niumaToggleMiniMode, object: nil)
+        }
+    }
+    
+    @MainActor
+    func startHealthTimer() {
+        healthTimer?.invalidate()
+        let minutes = settings.healthReminderMinutes
+        print("🚀 [AppDelegate] 启动原生摸鱼定时器，读取配置：\(minutes) 分钟")
+        guard minutes > 0 else { return }
+        
+        healthTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(minutes * 60), repeats: true) { _ in
+            MainActor.assumeIsolated {
+                print("⏰ [AppDelegate] 触发摸鱼提醒！")
+                let msg = HealthReminder.getRandomMessage()
+                NotificationCenter.default.post(name: .niumaTriggerBroadcast, object: msg)
+            }
         }
     }
 
@@ -25,7 +48,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let hosting = NSHostingView(rootView: content)
 
             self.window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 380, height: 600),
+                contentRect: NSRect(x: 0, y: 0, width: 380, height: 320),
                 styleMask: [.borderless, .fullSizeContentView],
                 backing: .buffered,
                 defer: false
@@ -40,9 +63,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             
             self.window.center()
             self.window.makeKeyAndOrderFront(nil)
+            // 🎯 强制每次都在屏幕正中央启动，无视之前的错误坐标
+        }
+    }
 
-            if let saved = self.settings.windowPosition {
-                self.window.setFrameOrigin(saved)
+    @objc private func handleMiniModeToggle(_ notification: Notification) {
+        MainActor.assumeIsolated {
+            guard let isMini = notification.object as? Bool else { return }
+            let targetHeight: CGFloat = isMini ? 46 : 320
+            
+            var newFrame = self.window.frame
+            newFrame.origin.y += newFrame.size.height - targetHeight
+            newFrame.size.height = targetHeight
+            
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.3
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                self.window.animator().setFrame(newFrame, display: true, animate: true)
             }
         }
     }
@@ -70,11 +107,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    @objc func togglePrivacy() { 
-        MainActor.assumeIsolated {
-            self.engine.maskAmount.toggle() 
-        }
-    }
+    @objc func togglePrivacy() { MainActor.assumeIsolated { self.engine.maskAmount.toggle() } }
 
     @objc func toggleClickThrough() {
         MainActor.assumeIsolated {
@@ -83,15 +116,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    @objc func openSettings() {
-        MainActor.assumeIsolated {
-            SettingsWindowController.shared.showWindow(engine: self.engine)
-        }
-    }
+    @objc func openSettings() { MainActor.assumeIsolated { SettingsWindowController.shared.showWindow(engine: self.engine) } }
 
-    @objc func quit() { 
-        NSApp.terminate(nil) 
-    }
+    @objc func quit() { NSApp.terminate(nil) }
 
     func applicationWillTerminate(_ notification: Notification) {
         MainActor.assumeIsolated {
