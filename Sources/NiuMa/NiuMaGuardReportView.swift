@@ -35,9 +35,15 @@ struct NiuMaGuardReportView: View {
     
     private var daysInMonth: [Int?] {
         let cal = Calendar.current
-        let range = cal.range(of: .day, in: .month, for: currentMonth)!
-        let firstWeekday = cal.component(.weekday, from: currentMonth)
-        var days: [Int?] = Array(repeating: nil, count: firstWeekday - 1)
+        guard let range = cal.range(of: .day, in: .month, for: currentMonth) else { return [] }
+        
+        // 获取当月第一天是星期几 (1=周日, 2=周一, ... 7=周六)
+        let components = cal.dateComponents([.year, .month], from: currentMonth)
+        let firstOfMonth = cal.date(from: components)!
+        let weekday = cal.component(.weekday, from: firstOfMonth)
+        
+        // 计算第一天前面需要补几个空格。如果是周日(1)，补 0 个；如果是周六(7)，补 6 个。
+        var days: [Int?] = Array(repeating: nil, count: weekday - 1)
         for day in range { days.append(day) }
         return days
     }
@@ -54,20 +60,68 @@ struct NiuMaGuardReportView: View {
     
     private var toxicEvaluation: String {
         let stats = monthStats
-        if stats.total == 0 { return "这个月你一条记录都没有，连摸鱼都不积极，没救了。" }
+        if stats.total == 0 { 
+            return "这个月你一条记录都没有，连摸鱼都不积极，没救了。" 
+        }
         
         let overtimeRatio = Double(stats.overtime) / Double(stats.total)
         
+        let perfectComments = [
+            "全勤准点下班！你是资本家眼里的刺头，打工人里的楷模。继续保持！",
+            "太爽了，一天班都没加！你的老板现在估计正在办公室摔杯子。",
+            "完美避开所有加班，你的下班跑路速度堪比博尔特。",
+            "全绿！这个月的你让老板感到十分头疼，请务必保持这个优良传统。",
+            "一天没加班，看来你已经彻底掌握了带薪摸鱼的核心科技。",
+            "这个月你完美捍卫了打工人的尊严，建议给你颁发反内卷勋章。"
+        ]
+        
+        let okComments = [
+            "偶尔加班，总体准点。你掌握了职场生存的微妙平衡，是个聪明的老油条。",
+            "加班不多，说明你既有能力把活干完，又有胆量准时下班。",
+            "踩点下班是你的常态，偶尔加个班就当是给资本家的一点安慰奖吧。",
+            "不错，大部分时间都在准点跑路，没有被工作完全绑架。",
+            "你有几次没跑掉，但总体依然是个清醒的打工人。",
+            "张弛有度，偶尔加加班也算是对得起那份工资了。"
+        ]
+        
+        let badComments = [
+            "加班天数不少啊，老板的保时捷轮毂有你的一份功劳。注意身体，别猝死了。",
+            "你加的这些班，换来了老板新换的真皮沙发。你的奉献精神令人感动。",
+            "加班频率有点高了，是不是该反思一下，是活太多，还是你太卷？",
+            "经常加班说明你是个负责任的人，但公司往往不这么想，他们只会觉得你好欺负。",
+            "你这个加班频率，你的工位都快长蘑菇了吧？",
+            "老板最喜欢你这种默默加班不求回报的员工了，因为真的不用给回报。",
+            "你的下班时间已经被工作吞噬了一半，醒醒！"
+        ]
+        
+        let worstComments = [
+            "你这个月基本都在加班。你这不是在打工，你是在卖命。你的青春正在加速贬值。",
+            "纯种极品牛马！你几乎每天都在加班，公司没你不行，但老板不会分你一分钱股份。",
+            "这个月你回家的次数屈指可数吧？你的颈椎和腰椎正在联合抗议。",
+            "你已经把公司当家了，但请记住，公司永远不会把你当家人。",
+            "几乎全红的日历，看着都让人心梗。你是要用生命点亮老板的别墅吗？",
+            "这哪里是打卡记录，这明明是你的受难史。",
+            "你加班加到连看这个报表的时间都没有了吧？"
+        ]
+        
+        let maxComments = [
+            "你已经被彻底异化成了工具人，老板不给你发工资都算做慈善了。",
+            "纯种极品牛马！...不，说你是牛马都抬举你了，你是被榨干的电池。快跑吧！",
+            "这个月你是不是就住在公司了？建议直接向老板申请一张行军床。",
+            "资本家看了你的打卡记录都要流下感动的泪水（然后换辆新车）。",
+            "命是你自己的，钱是老板的。再这么加下去，下个月你可能就得在ICU打卡了。"
+        ]
+        
         if overtimeRatio == 0 {
-            return "全勤准点下班！你是资本家眼里的刺头，打工人里的楷模。继续保持！"
+            return perfectComments.randomElement()!
         } else if overtimeRatio < 0.2 {
-            return "偶尔加班，总体准点。你掌握了职场生存的微妙平衡，是个聪明的老油条。"
+            return okComments.randomElement()!
         } else if overtimeRatio < 0.5 {
-            return "加班天数不少啊，老板的保时捷轮毂有你的一份功劳。注意身体，别猝死了。"
+            return badComments.randomElement()!
         } else if overtimeRatio < 0.8 {
-            return "你这个月基本都在加班。你这不是在打工，你是在卖命。你的青春正在加速贬值。"
+            return worstComments.randomElement()!
         } else {
-            return "纯种极品牛马！你几乎每天都在加班，公司没你不行，但老板不会分你一分钱股份。"
+            return maxComments.randomElement()!
         }
     }
     
@@ -91,10 +145,9 @@ struct NiuMaGuardReportView: View {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
                 ForEach(0..<daysInMonth.count, id: \.self) { i in
                     if let day = daysInMonth[i] {
-                        let dateStr = String(format: "%04d-%02d-%02d", 
-                                             Calendar.current.component(.year, from: currentMonth),
-                                             Calendar.current.component(.month, from: currentMonth),
-                                             day)
+                        let year = Calendar.current.component(.year, from: currentMonth)
+                        let month = Calendar.current.component(.month, from: currentMonth)
+                        let dateStr = String(format: "%04d-%02d-%02d", year, month, day)
                         NiuMaGuardDayCell(day: day, dateStr: dateStr, niumaGuard: niumaGuard)
                     } else {
                         Text("").frame(width: 32, height: 32)
